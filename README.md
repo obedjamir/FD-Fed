@@ -37,7 +37,7 @@ Output directory paths
 
 All parameters are defined directly inside the corresponding script.
 
-Running Experiments
+### Running Experiments
 All federated learning experiments are executed from the system/ directory.
 
 Main Components
@@ -53,20 +53,7 @@ Hyperparameters for each method and dataset can be adjusted directly inside run.
 Example Command
 Below is an example command for running a single experiment using FD-Fed. Similar commands are used for other methods and datasets.
 
-nohup python3 main.py \
--algo OursGCAM \
--lr 0.01 \
--al 0.001 \
--m effnet \
--mn effnet \
--lam 0.35 \
--th 2 \
--nc 3 \
--data nihchestxray \
--t 5 \
--go experiment \
--gpu 0 \
-> OursGCAM_nihchestxray.log 2>&1 &
+nohup python3 main.py -algo OursGCAM -lr 0.01 -al 0.001 -m effnet -mn effnet -lam 0.35 -th 2 -nc 3 -data nihchestxray -t 5 -go experiment -gpu 0 > OursGCAM_nihchestxray.log 2>&1 &
 
 The codebase supports the following federated learning methods:
 
