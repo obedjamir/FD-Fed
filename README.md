@@ -1,6 +1,6 @@
 # FD-Fed: Feature-Driven Layer Specialization for Label-Heterogeneous Federated Learning
 
-This repository provides the official implementation of **FD-Fed**, a federated learning framework designed to address **label heterogeneity** across distributed clients through **feature-driven layer specialization**. The code supports experiments on both medical and natural image datasets and enables fair comparison with several personalized federated learning baselines.
+This repository provides the official implementation of **FD-Fed**, a federated learning framework designed to address **label heterogeneity** across distributed clients through **feature-driven layer specialization**. The code supports experiments on both **medical** and **natural image datasets** and enables fair comparison with several personalized federated learning baselines.
 
 ---
 
@@ -10,68 +10,86 @@ The `dataset/` directory contains scripts to generate datasets for federated lea
 
 ### Available Dataset Scripts
 
-- `generate_CheXpert.py`
-- `generate_MIMIC.py`
-- `generate_NIHChestXray.py`
-- `generate_cifar10.py`
-- `generate_cifar100.py`
-- `generate_cinic10.py`
+- generate_CheXpert.py
+- generate_MIMIC.py
+- generate_NIHChestXray.py
+- generate_cifar10.py
+- generate_cifar100.py
+- generate_cinic10.py
 
 ### Generating a Dataset
 
 From the `dataset/` directory, run:
-python3 <SCRIPT_NAME>
+
+    python3 <SCRIPT_NAME>
 
 Example:
-python3 generate_NIHChestXray.py
+
+    python3 generate_NIHChestXray.py
 
 Within each dataset script, the following parameters can be modified:
 
-Number of clients
-
-Number of runs
-
-Dataset split configuration
-
-Output directory paths
+- Number of clients
+- Number of runs
+- Dataset split configuration
+- Output directory paths
 
 All parameters are defined directly inside the corresponding script.
 
+---
+
+## Running Experiments
+
+All federated learning experiments are executed from the `system/` directory.
+
+### Main Components
+
+- main.py: Core federated learning framework
+- run.sh: Script to launch experiments sequentially
+
 ### Running Experiments
-All federated learning experiments are executed from the system/ directory.
 
-Main Components
-main.py: Core Federated Learning framework
+    cd system
+    bash run.sh
 
-run.sh: Script to launch experiments sequentially
+Hyperparameters for each method and dataset can be adjusted directly inside `run.sh`.
 
-Running Experiments
-cd system
-bash run.sh
-Hyperparameters for each method and dataset can be adjusted directly inside run.sh.
+---
 
-Example Command
-Below is an example command for running a single experiment using FD-Fed. Similar commands are used for other methods and datasets.
+## Example Command
 
-nohup python3 main.py -algo OursGCAM -lr 0.01 -al 0.001 -m effnet -mn effnet -lam 0.35 -th 2 -nc 3 -data nihchestxray -t 5 -go experiment -gpu 0 > OursGCAM_nihchestxray.log 2>&1 &
+Below is an example command for running a single experiment using **FD-Fed**. Similar commands are used for other methods and datasets.
 
-The codebase supports the following federated learning methods:
+    nohup python3 main.py \
+      -algo OursGCAM \
+      -lr 0.01 \
+      -al 0.001 \
+      -m effnet \
+      -mn effnet \
+      -lam 0.35 \
+      -th 2 \
+      -nc 3 \
+      -data nihchestxray \
+      -t 5 \
+      -go experiment \
+      -gpu 0 \
+      > OursGCAM_nihchestxray.log 2>&1 &
 
-FD-Fed (proposed)
+---
 
-FedBABU
+## Supported Methods
 
-FedPer
+- FD-Fed (proposed)
+- FedBABU
+- FedPer
+- FedRep
+- FedPav
+- Local training
 
-FedRep
+---
 
-FedPav
+## Notes
 
-Local training
-
-Notes
-Experiments are executed asynchronously using nohup.
-
-Training logs are saved to .log files for later inspection.
-
-GPU selection is controlled via the -gpu argument.
+- Experiments are executed asynchronously using `nohup`.
+- Training logs are saved to `.log` files for later inspection.
+- GPU selection is controlled via the `-gpu` argument.
