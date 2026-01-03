@@ -50,7 +50,7 @@ All federated learning experiments are executed from the `system/` directory.
 ### Running Experiments
 
     cd system
-    bash run.sh
+    ./run.sh
 
 Hyperparameters for each method and dataset can be adjusted directly inside `run.sh`.
 
