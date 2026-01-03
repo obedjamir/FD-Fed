@@ -4,24 +4,6 @@ This repository provides the official implementation of **FD-Fed**, a federated 
 
 ---
 
-## Project Structure
-
-.
-├── dataset/
-│ ├── generate_CheXpert.py
-│ ├── generate_cifar10.py
-│ ├── generate_cifar100.py
-│ ├── generate_cinic10.py
-│ ├── generate_MIMIC.py
-│ └── generate_NIHChestXray.py
-│
-└── system/
-├── main.py
-├── run.sh
-└── ...
-
----
-
 ## Dataset Preparation
 
 The `dataset/` directory contains scripts to generate datasets for federated learning experiments. Each dataset has a dedicated script that prepares client-wise data splits suitable for label-heterogeneous settings.
