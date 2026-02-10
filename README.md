@@ -61,7 +61,7 @@ Hyperparameters for each method and dataset can be adjusted directly inside `run
 Below is an example command for running a single experiment using **FD-Fed**. Similar commands are used for other methods and datasets.
 
     nohup python3 main.py \
-      -algo OursGCAM \
+      -algo FDFed \
       -lr 0.01 \
       -al 0.001 \
       -m effnet \
@@ -73,7 +73,7 @@ Below is an example command for running a single experiment using **FD-Fed**. Si
       -t 5 \
       -go experiment \
       -gpu 0 \
-      > OursGCAM_nihchestxray.log 2>&1 &
+      > FDFed_nihchestxray.log 2>&1 &
 
 ---
 
