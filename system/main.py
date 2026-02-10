@@ -47,9 +47,9 @@ def run(args):
             from flcore.servers.serverbabu import FedBABU
             server = FedBABU(args, i)
 
-        elif args.algorithm.startswith("OursGCAM"):
-            from flcore.servers.serveroursgcam import OurFedAvgGCAM
-            server = OurFedAvgGCAM(args, i)
+        elif args.algorithm.startswith("FDFed"):
+            from flcore.servers.serverfd import FDFed
+            server = FDFed(args, i)
 
         else:
             raise NotImplementedError
@@ -74,7 +74,7 @@ def get_args():
     parser.add_argument('-gr', "--global_rounds", type=int, default=50)
     parser.add_argument('-ls', "--local_steps", type=int, default=5)
     parser.add_argument('-algo', "--algorithm", type=str, default="Local",
-                        choices=["Local", "FedRep", "FedPer", "FedPav", "FedBABU", "OursGCAM"])
+                        choices=["Local", "FedRep", "FedPer", "FedPav", "FedBABU", "FDFed"])
     parser.add_argument('-nc', "--num_clients", type=int, default=5,
                         help="Total number of clients")
     parser.add_argument('-pv', "--prev", type=int, default=0,

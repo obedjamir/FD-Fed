@@ -62,7 +62,7 @@ class GradCAMModule:
         self.id = client_id
         self.load_images = load_images_func
 
-        os.makedirs(f'OursGCAM/{self.id}', exist_ok=True)
+        os.makedirs(f'FDFed/{self.id}', exist_ok=True)
 
         self.transform_alt = transforms.Compose([
             transforms.Resize((1024, 1024)),
