@@ -23,7 +23,7 @@ class clientFDFed(Client):
         trainloader = self.load_train_data()
         if adapt:
             self.model.unfreeze_all_blocks()
-            self.model.freeze_base_blocks(0, self.general_block_index)
+            self.model.freeze_blocks(0, self.general_block_index)
             max_local_steps = self.args.plocal_steps
             optimizer = self.finetune_optimizer
         else:
