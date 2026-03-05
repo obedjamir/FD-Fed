@@ -34,6 +34,35 @@ class EfficientNetB0(nn.Module):
         x = x.view(x.size(0), -1)
         return x
 
+class MobileNetV3Small(nn.Module):
+    def __init__(self):
+        super(MobileNetV3Small, self).__init__()
+
+        mobilenet_v3_small = models.mobilenet_v3_small(pretrained=False)
+
+        self.upsample = nn.Upsample(size=(224, 224), mode='bilinear', align_corners=False)
+        self.features = mobilenet_v3_small.features
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.out_features = 576
+
+        self.block_list = self._create_block_list()
+        self.block_count = len(self.block_list)
+        print(f"MobileNetV3SmallGradCAM Block Count: {self.block_count}")
+
+    def forward(self, x):
+        x = self.upsample(x)
+        x = self.features(x)
+        x = self.pool(x)
+        x = x.view(x.size(0), -1)
+        return x
+
+    def _create_block_list(self):
+        block_list = [self.upsample]
+        for block in self.features:
+            block_list.append(block)
+        return nn.ModuleList(block_list)
+        
 class LocalModel(nn.Module):
     def __init__(self, base_model, num_classes, out_feats=1280):
         super().__init__()
