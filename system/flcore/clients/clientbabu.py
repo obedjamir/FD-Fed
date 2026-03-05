@@ -38,7 +38,7 @@ class clientBABU(Client):
         optimizer = self.get_training_optimizer()
         self.prepare_training()
 
-        for param in self.model.predictor.parameters():
+        for param in self.model.predictor_block.parameters():
             param.requires_grad = False
 
         max_local_steps = self.local_steps
@@ -61,7 +61,7 @@ class clientBABU(Client):
         self.prepare_fine_tuning()
         optimizer = self.get_fine_tuning_optimizer()
 
-        for param in self.model.predictor.parameters():
+        for param in self.model.predictor_block.parameters():
             param.requires_grad = True
 
         xrayData = ["chexpert", "nihchestxray", "mimic"]
