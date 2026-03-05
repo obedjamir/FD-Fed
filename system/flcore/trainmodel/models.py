@@ -163,3 +163,16 @@ class LocalModel(nn.Module):
                 p.requires_grad = True
         for p in self.predictor_block.parameters():
             p.requires_grad = True
+            
+    def freeze_blocks(self, start, end):
+        if end is None:
+            end = self.num_blocks - 1
+        blocks_frozen = 0
+        for i, block in enumerate(self.block_list):
+            if i>= start and i <= end and start < end:
+                for param in block.parameters():
+                    param.requires_grad = False
+                blocks_frozen += 1
+
+        print(f"Blocks Frozen: {blocks_frozen}")
+
