@@ -21,6 +21,8 @@ def run(args):
         # Generate args.model
         if model_str == "effnet":
             args.model = EfficientNetB0().to(args.device)
+        elif model_str == "peffnet":
+            args.model = PatchEfficientNetB0(in_channels=16).to(args.device)
         elif model_str == "mobilenet":
             args.model = MobileNetV3Small().to(args.device)
         else:
@@ -50,6 +52,9 @@ def run(args):
         elif args.algorithm.startswith("FDFed"):
             from flcore.servers.serverfd import FDFed
             server = FDFed(args, i)
+        elif args.algorithm.startswith("DLAFed"):
+            from flcore.servers.serverdla import DLAFed
+            server = DLAFed(args, i)
 
         else:
             raise NotImplementedError
@@ -65,7 +70,7 @@ def get_args():
                         choices=["cpu", "cuda"])
     parser.add_argument('-did', "--device_id", type=str, default="0")
     parser.add_argument('-data', "--dataset", type=str, default="cifar10",
-                        choices=["cinic10", "cifar10", "cifar100", "nihchestxray", "chexpert", "mimic"])
+                        choices=["nihchestxray", "chexpert", "mimic"])
     parser.add_argument('-m', "--model", type=str, default="cnn")
     parser.add_argument('-mn', "--model_name", type=str, default="alt")
     parser.add_argument('-lbs', "--batch_size", type=int, default=10)
@@ -74,16 +79,19 @@ def get_args():
     parser.add_argument('-gr', "--global_rounds", type=int, default=50)
     parser.add_argument('-ls', "--local_steps", type=int, default=5)
     parser.add_argument('-algo', "--algorithm", type=str, default="Local",
-                        choices=["Local", "FedRep", "FedPer", "FedPav", "FedBABU", "FDFed"])
+                        choices=["Local", "FedRep", "FedPer", "FedPav", "FedBABU", "FDFed", "DLAFed"])
     parser.add_argument('-nc', "--num_clients", type=int, default=5,
                         help="Total number of clients")
     parser.add_argument('-pv', "--prev", type=int, default=0,
                         help="Previous Running times")
+    parser.add_argument('-pr', "--prev_round", type=int, default=0,
+                        help="Previous Global Round")
     parser.add_argument('-t', "--times", type=int, default=1,
                         help="Running times")
     parser.add_argument('-eg', "--eval_gap", type=int, default=1,
                         help="Rounds gap for evaluation")
 
+    parser.add_argument('-tmp', "--temperature", type=float, default=1.0)
     parser.add_argument('-lam', "--lambdaa", type=float, default=1.0)
     parser.add_argument('-al', "--alpha", type=float, default=0.01)
     parser.add_argument('-pls', "--plocal_steps", type=int, default=1)

@@ -5,8 +5,8 @@ import numpy as np
 from flcore.clients.clientbase import Client
 
 class clientBABU(Client):
-    def __init__(self, args, id, train_samples, test_samples, **kwargs):
-        super().__init__(args, id, train_samples, test_samples, **kwargs)
+    def __init__(self, args, id, train_samples, **kwargs):
+        super().__init__(args, id, train_samples, **kwargs)
         self.criterion = nn.CrossEntropyLoss()
         self.args = args
 

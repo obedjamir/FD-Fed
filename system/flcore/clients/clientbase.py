@@ -20,7 +20,7 @@ class Client(object):
     Base class for clients in federated learning.
     """
 
-    def __init__(self, args, id, train_samples, test_samples, local_labels, dataset_id, **kwargs):
+    def __init__(self, args, id, train_samples, local_labels, dataset_id, **kwargs):
         self.dataset = args.dataset
         self.device = args.device
         self.id = id
@@ -29,24 +29,67 @@ class Client(object):
         self.num_classes = len(local_labels)
 
         self.train_samples = train_samples
-        self.test_samples = test_samples
-        self.model = LocalModel(copy.deepcopy(args.model), self.num_classes).to(args.device)
+        self.model = LocalModel(copy.deepcopy(args.model), self.num_classes, out_feats=768).to(args.device)
+        self.model._register_block_hooks()
         self.train_data = None
         self.test_data = None
         self.val_data = None
+        self.current_round = 0
+        self.class_sample_count = None
 
         self.batch_size = args.batch_size
         self.learning_rate = args.local_learning_rate
         self.local_steps = args.local_steps
-
+        self.label_map = None
         # check BatchNorm
         self.has_BatchNorm = False
         for layer in self.model.children():
             if isinstance(layer, nn.BatchNorm2d):
                 self.has_BatchNorm = True
                 break
-            
+
         self.sample_rate = self.batch_size / self.train_samples
+
+    def patch_to_channels(self, x, patch_size=128, target_size=224, resize=True):
+        """
+        x: (B, 1, 512, 512)
+        returns: (B, N_patches, 224, 224)
+        """
+        B, C, H, W = x.shape
+        assert C == 1 and H == 512 and W == 512
+
+        P = patch_size
+
+        # Extract non-overlapping patches
+        patches = x.unfold(2, P, P).unfold(3, P, P)
+        # (B, 1, nH, nW, P, P)
+
+        patches = patches.contiguous().view(B, 1, -1, P, P)
+        patches = patches.squeeze(1)  # (B, Np, P, P)
+
+        # Resize each patch to 224×224
+        if resize:
+            patches = F.interpolate(
+                patches,
+                size=(target_size, target_size),
+                mode="bilinear",
+                align_corners=False
+            )
+
+        return patches  # (B, Np, 224, 224)
+
+    def compute_class_sample_count(self, dataset):
+        """
+        dataset: torch.utils.data.Dataset
+        returns: dict {class_id: count}
+        """
+        class_counts = {}
+
+        for _, label in dataset:
+            label = int(label)
+            class_counts[label] = class_counts.get(label, 0) + 1
+
+        return class_counts
 
     def load_train_data(self, batch_size=None, shuffle=True):
         if batch_size is None:
@@ -54,7 +97,12 @@ class Client(object):
         
         # Load and cache train data if not already loaded
         if self.train_data is None:
-            self.train_data, _ = read_client_data(self.dataset, self.id, self.dataset_id, data_split='train')
+            self.train_data, _, self.label_map = read_client_data(self.dataset, self.id, self.dataset_id, data_split='train')
+
+        self.class_sample_count = self.compute_class_sample_count(self.train_data)
+
+        # Debug print (do once)
+        print(f"[Client {self.id}] Class sample count: {self.class_sample_count}")
 
         batch_size = min(batch_size, len(self.train_data))
         return DataLoader(self.train_data, batch_size, drop_last=True, shuffle=shuffle)
@@ -103,17 +151,24 @@ class Client(object):
         y_prob = []
         y_true = []
         
-        xrayData = ["chexpert", "nihchestxray", "mimic", "nihchestxrayalt"]
+        xrayData = ["chexpert", "nihchestxray", "mimic"]
         with torch.no_grad():
             for x, y in testloaderfull:
                 if self.args.dataset in xrayData:
                     x = torch.stack(self.load_images(x)).to(self.device)
+                    if self.args.algorithm=="DLAFed":
+                        x = self.enhance_cxr(x, 1000)
                 elif type(x) == type([]):
                     x[0] = x[0].to(self.device)
                 else:
                     x = x.to(self.device)
                 y = y.to(self.device)
-                output = model(x)
+
+                if self.args.algorithm=="DLAFed":
+                    proto_loss, output = self.model(x,  y, self.class_prototypes, self.class_sample_count, self.num_classes,use_proto=True)
+                else:
+                    output = model(x)
+
                 test_loss += (self.criterion(output, y.long()) * y.shape[0]).item()
 
                 test_correct += (torch.sum(torch.argmax(output, dim=1) == y)).item()
@@ -121,6 +176,7 @@ class Client(object):
 
                 y_prob.append(output.detach().cpu().numpy())
                 y_true.append(label_binarize(y.detach().cpu().numpy(), classes=np.arange(self.num_classes)))
+                break
 
         y_prob = np.concatenate(y_prob, axis=0)
         y_true = np.concatenate(y_true, axis=0)
@@ -156,7 +212,7 @@ class Client(object):
         , transform=transforms.Compose([
             transforms.Resize((512, 512)),
             transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
+            #transforms.Normalize((0.5,), (0.5,))
         ])
         , max_workers=10):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:

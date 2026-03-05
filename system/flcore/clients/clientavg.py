@@ -4,11 +4,13 @@ import numpy as np
 import copy
 import sys
 from flcore.clients.clientbase import Client
-
+import os
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 class clientAVG(Client):
-    def __init__(self, args, id, train_samples, test_samples, **kwargs):
-        super().__init__(args, id, train_samples, test_samples, **kwargs)
+    def __init__(self, args, id, train_samples, **kwargs):
+        super().__init__(args, id, train_samples, **kwargs)
         self.args = args
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)

@@ -5,12 +5,11 @@ import numpy as np
 from flcore.clients.clientbase import Client
 
 class clientPer(Client):
-    def __init__(self, args, id, train_samples, test_samples, local_labels, **kwargs):
-        super().__init__(args, id, train_samples, test_samples, local_labels, **kwargs)
+    def __init__(self, args, id, train_samples, **kwargs):
+        super().__init__(args, id, train_samples, **kwargs)
         self.args = args
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)
-        self.local_labels = local_labels
 
     def train(self):
         trainloader = self.load_train_data()

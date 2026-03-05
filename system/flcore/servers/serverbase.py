@@ -98,14 +98,12 @@ class Server(object):
         self.new_clients = None
         for i in range(self.num_clients):
             dataset_id=str(self.times)
-            train_data, unique_labels = read_client_data(self.dataset, i, dataset_id, data_split='train')
-            test_data, _ = read_client_data(self.dataset, i, dataset_id, data_split='test')
+            train_data, unique_labels, _ = read_client_data(self.dataset, i, dataset_id, data_split='train')
 
             print(unique_labels)
             client = clientObj(args,
                             id=i,
                             train_samples=len(train_data),
-                            test_samples=len(test_data),
                             local_labels=unique_labels,
                             dataset_id=dataset_id)
             self.clients.append(client)
@@ -223,6 +221,7 @@ class Server(object):
             raise NotImplementedError
 
         print(test_accs)
+        print(test_aucs)
         self.best_mean_test_acc = max(mean_test_acc, self.best_mean_test_acc)
         self.rs_test_acc.append(mean_test_acc)
         self.rs_test_auc.append(mean_test_auc)

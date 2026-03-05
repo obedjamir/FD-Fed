@@ -2,122 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-
-class LocalModel(nn.Module):
-    def __init__(self, base, num_classes):
-        super(LocalModel, self).__init__()
-        self.base = base
-        self.predictor = nn.Linear(base.out_features, num_classes)
-        self.layer_list = self.base.layer_list
-        self.layer_count = self.base.layer_count
-        print([module for module in self.predictor.modules()])
-
-    def forward(self, x):
-        out = self.base(x)
-        out = self.predictor(out)
-        return out
-
-    def freeze_layers(self, start, end):
-        if end is None:
-            end = self.layer_count - 1
-        layers_frozen = 0
-        for i, layer in enumerate(self.layer_list):
-            if i>= start and i <= end and start < end:
-                for param in layer.parameters():
-                    param.requires_grad = False
-                layers_frozen += 1
-
-        print(f"Layers Frozen: {layers_frozen}")
-
-    def freeze_base(self):
-        for param in self.base.parameters():
-            param.requires_grad = False
-        print(f"Base has been Frozen.")
-
-    def freeze_predictor(self):
-        for param in self.predictor.parameters():
-            param.requires_grad = False
-        print("Predictor has been frozen.")
-
-    def unfreeze_layers(self):
-        for param in self.base.parameters():
-            param.requires_grad = True
-        for param in self.predictor.parameters():
-            param.requires_grad = True
-        print("All Layers have been unfrozen.")
-
-class DownsampleBlock(nn.Module):
-    def __init__(self):
-        super(DownsampleBlock, self).__init__()
-        self.block = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=0),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=7, stride=1, padding=0),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=0),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding=0),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(in_channels=32, out_channels=16, kernel_size=7, stride=1, padding=0),
-            nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(in_channels=16, out_channels=3, kernel_size=7, stride=1, padding=0),
-            nn.BatchNorm2d(3),
-            nn.ReLU(inplace=True)
-        )
-
-    def forward(self, x):
-        return self.block(x)
-
-class MobileNetV3Small(nn.Module):
-    def __init__(self):
-        super(MobileNetV3Small, self).__init__()
-
-        mobilenet_v3_small = models.mobilenet_v3_small(pretrained=False)
-
-        self.upsample = nn.Upsample(size=(224, 224), mode='bilinear', align_corners=False)
-        self.features = mobilenet_v3_small.features
-        self.pool = nn.AdaptiveAvgPool2d((1, 1))
-
-        self.out_features = 576
-
-        self.layer_list = self._create_block_list()
-        self.layer_count = len(self.layer_list)
-        print(f"MobileNetV3SmallGradCAM Block Count: {self.layer_count}")
-
-    def forward(self, x):
-        x = self.upsample(x)
-        x = self.features(x)
-        x = self.pool(x)
-        x = x.view(x.size(0), -1)
-        return x
-
-    def _create_block_list(self):
-        block_list = [self.upsample]
-        for block in self.features:
-            block_list.append(block)
-        return nn.ModuleList(block_list)
-
+import torchvision
 
 class EfficientNetB0(nn.Module):
     def __init__(self):
         super(EfficientNetB0, self).__init__()
         effnet = models.efficientnet_b0(pretrained=False)
 
-        self.downsample = DownsampleBlock()
         self.features = nn.Sequential(
             effnet.features,
             nn.AdaptiveAvgPool2d((1, 1))
@@ -125,19 +16,11 @@ class EfficientNetB0(nn.Module):
 
         self.out_features = effnet.classifier[1].in_features
 
-        self.layer_list = self._create_block_list()
-        self.layer_count = len(self.layer_list)
-        print(self.layer_count)
-
-    def forward(self, x):
-        x = self.downsample(x)
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        return x
+        self.block_list = self._create_block_list()
+        self.block_count = len(self.block_list)
 
     def _create_block_list(self):
         block_list = []
-        block_list.append(self.downsample)
         for block in self.features[0]:
             if block.__class__.__name__ == 'Sequential':
                 for sub_block in block:
@@ -145,3 +28,138 @@ class EfficientNetB0(nn.Module):
             else:
                 block_list.append(block)
         return nn.ModuleList(block_list)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        return x
+
+class LocalModel(nn.Module):
+    def __init__(self, base_model, num_classes, out_feats=1280):
+        super().__init__()
+
+        self.base = base_model
+        self.out_feats = out_feats
+
+        self.feat_to_text = nn.Linear(1280, self.out_feats, bias=False)
+        self.predictor_block = nn.Linear(1280, num_classes)
+
+        # --------------------------------------------------
+        # Block bookkeeping
+        # --------------------------------------------------
+        self.base.block_list.append(self.feat_to_text)
+        self.base.block_count += 1
+        self.block_list = self.base.block_list
+        self.num_blocks = self.base.block_count
+
+        self.block_features = {}     # for variance stats
+        self.se_attn = {}            # 🔥 SE attention per block
+
+        self._register_block_hooks()
+
+    # --------------------------------------------------
+    # Prototype loss
+    # --------------------------------------------------
+    def prototype_loss(
+        self,
+        base_feats,
+        labels,
+        prototypes,
+        class_sample_count,
+        num_classes,
+        tau=0.07,
+        beta=0.2
+    ):
+
+        # ---- project features to text space ----
+        v = self.feat_to_text(base_feats)
+        v = F.normalize(v, dim=1)
+
+        # ---- normalize prototypes ----
+        proto = F.normalize(prototypes, dim=1)
+
+        # ---- contrastive prototype logits ----
+        proto_logits = torch.matmul(v, proto.T) / tau   # [B, C]
+
+        # ---- predictor classification logits ----
+        cls_logits = self.predictor_block(base_feats)   # [B, C]
+
+        # ---- class-balanced weights ----
+        counts = torch.tensor(
+            [class_sample_count.get(i, 1) for i in range(num_classes)],
+            device=labels.device,
+            dtype=torch.float32
+        )
+
+        counts = torch.clamp(counts, min=1.0)
+
+        class_weights = 1.0 / counts
+        class_weights = class_weights / class_weights.mean()
+
+        # ---- classification loss ----
+        cls_loss = F.cross_entropy(
+            cls_logits,
+            labels,
+            weight=class_weights
+        )
+
+        # ---- prototype contrastive loss ----
+        proto_loss = F.cross_entropy(
+            proto_logits,
+            labels,
+            weight=class_weights
+        )
+
+        # ---- total loss ----
+        total_loss = cls_loss + beta * proto_loss
+
+        return total_loss, cls_logits
+
+    # --------------------------------------------------
+    # Block feature hooks (already used by you)
+    # --------------------------------------------------
+    def _register_block_hooks(self):
+        def make_hook(bidx):
+            def hook(module, inp, out):
+                if isinstance(out, torch.Tensor):
+                    feat = out
+                    if feat.dim() > 2:
+                        feat = feat.mean(dim=(2, 3))
+                    self.block_features[bidx] = feat.detach()
+            return hook
+
+        for bidx, block in enumerate(self.block_list):
+            block.register_forward_hook(make_hook(bidx))
+
+    # --------------------------------------------------
+    # Forward
+    # --------------------------------------------------
+    def forward(self, x, y=None, prototypes=None, class_sample_count=None, num_classes=None, use_proto=False):
+        # --- ensure 3 channels ---
+        if x.dim() == 4 and x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
+        base_feats = self.base(x)
+
+        if use_proto:
+            p_loss, logits = self.prototype_loss(
+                base_feats, y, prototypes, class_sample_count, num_classes
+            )
+            return p_loss, logits
+
+        logits = self.predictor_block(base_feats)
+        return logits
+
+    # --------------------------------------------------
+    # Block control
+    # --------------------------------------------------
+    def freeze_base_blocks(self):
+        for block in self.block_list:
+            for p in block.parameters():
+                p.requires_grad = False
+
+    def unfreeze_all_blocks(self):
+        for block in self.block_list:
+            for p in block.parameters():
+                p.requires_grad = True
+        for p in self.predictor_block.parameters():
+            p.requires_grad = True

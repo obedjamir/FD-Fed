@@ -7,8 +7,8 @@ import copy
 from flcore.clients.clientbase import Client
 
 class clientRep(Client):
-    def __init__(self, args, id, train_samples, test_samples, **kwargs):
-        super().__init__(args, id, train_samples, test_samples, **kwargs)
+    def __init__(self, args, id, train_samples, **kwargs):
+        super().__init__(args, id, train_samples, **kwargs)
         
         self.args = args
         self.criterion = nn.CrossEntropyLoss()
