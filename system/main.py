@@ -21,8 +21,6 @@ def run(args):
         # Generate args.model
         if model_str == "effnet":
             args.model = EfficientNetB0().to(args.device)
-        elif model_str == "peffnet":
-            args.model = PatchEfficientNetB0(in_channels=16).to(args.device)
         elif model_str == "mobilenet":
             args.model = MobileNetV3Small().to(args.device)
         else:
@@ -52,10 +50,6 @@ def run(args):
         elif args.algorithm.startswith("FDFed"):
             from flcore.servers.serverfd import FDFed
             server = FDFed(args, i)
-        elif args.algorithm.startswith("DLAFed"):
-            from flcore.servers.serverdla import DLAFed
-            server = DLAFed(args, i)
-
         else:
             raise NotImplementedError
 
@@ -79,7 +73,7 @@ def get_args():
     parser.add_argument('-gr', "--global_rounds", type=int, default=50)
     parser.add_argument('-ls', "--local_steps", type=int, default=5)
     parser.add_argument('-algo', "--algorithm", type=str, default="Local",
-                        choices=["Local", "FedRep", "FedPer", "FedPav", "FedBABU", "FDFed", "DLAFed"])
+                        choices=["Local", "FedRep", "FedPer", "FedPav", "FedBABU", "FDFed"])
     parser.add_argument('-nc', "--num_clients", type=int, default=5,
                         help="Total number of clients")
     parser.add_argument('-pv', "--prev", type=int, default=0,
