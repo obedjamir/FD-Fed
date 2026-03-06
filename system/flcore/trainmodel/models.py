@@ -68,81 +68,17 @@ class LocalModel(nn.Module):
         super().__init__()
 
         self.base = base_model
-        self.out_feats = out_feats
-
-        self.feat_to_text = nn.Linear(1280, self.out_feats, bias=False)
-        self.predictor_block = nn.Linear(1280, num_classes)
-
+        self.predictor_block = nn.Linear(out_feats, num_classes)
         # --------------------------------------------------
         # Block bookkeeping
         # --------------------------------------------------
-        self.base.block_list.append(self.feat_to_text)
-        self.base.block_count += 1
         self.block_list = self.base.block_list
         self.num_blocks = self.base.block_count
 
         self.block_features = {}     # for variance stats
-        self.se_attn = {}            # 🔥 SE attention per block
+        self.se_attn = {}            # SE attention per block
 
         self._register_block_hooks()
-
-    # --------------------------------------------------
-    # Prototype loss
-    # --------------------------------------------------
-    def prototype_loss(
-        self,
-        base_feats,
-        labels,
-        prototypes,
-        class_sample_count,
-        num_classes,
-        tau=0.07,
-        beta=0.2
-    ):
-
-        # ---- project features to text space ----
-        v = self.feat_to_text(base_feats)
-        v = F.normalize(v, dim=1)
-
-        # ---- normalize prototypes ----
-        proto = F.normalize(prototypes, dim=1)
-
-        # ---- contrastive prototype logits ----
-        proto_logits = torch.matmul(v, proto.T) / tau   # [B, C]
-
-        # ---- predictor classification logits ----
-        cls_logits = self.predictor_block(base_feats)   # [B, C]
-
-        # ---- class-balanced weights ----
-        counts = torch.tensor(
-            [class_sample_count.get(i, 1) for i in range(num_classes)],
-            device=labels.device,
-            dtype=torch.float32
-        )
-
-        counts = torch.clamp(counts, min=1.0)
-
-        class_weights = 1.0 / counts
-        class_weights = class_weights / class_weights.mean()
-
-        # ---- classification loss ----
-        cls_loss = F.cross_entropy(
-            cls_logits,
-            labels,
-            weight=class_weights
-        )
-
-        # ---- prototype contrastive loss ----
-        proto_loss = F.cross_entropy(
-            proto_logits,
-            labels,
-            weight=class_weights
-        )
-
-        # ---- total loss ----
-        total_loss = cls_loss + beta * proto_loss
-
-        return total_loss, cls_logits
 
     # --------------------------------------------------
     # Block feature hooks (already used by you)
@@ -163,18 +99,11 @@ class LocalModel(nn.Module):
     # --------------------------------------------------
     # Forward
     # --------------------------------------------------
-    def forward(self, x, y=None, prototypes=None, class_sample_count=None, num_classes=None, use_proto=False):
+    def forward(self, x):
         # --- ensure 3 channels ---
         if x.dim() == 4 and x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)
         base_feats = self.base(x)
-
-        if use_proto:
-            p_loss, logits = self.prototype_loss(
-                base_feats, y, prototypes, class_sample_count, num_classes
-            )
-            return p_loss, logits
-
         logits = self.predictor_block(base_feats)
         return logits
 
