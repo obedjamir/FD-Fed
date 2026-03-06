@@ -30,6 +30,9 @@ class EfficientNetB0(nn.Module):
         return nn.ModuleList(block_list)
 
     def forward(self, x):
+        # --- ensure 3 channels ---
+        if x.dim() == 4 and x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
         x = self.features(x)
         x = x.view(x.size(0), -1)
         return x
@@ -100,9 +103,6 @@ class LocalModel(nn.Module):
     # Forward
     # --------------------------------------------------
     def forward(self, x):
-        # --- ensure 3 channels ---
-        if x.dim() == 4 and x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)
         base_feats = self.base(x)
         logits = self.predictor_block(base_feats)
         return logits
