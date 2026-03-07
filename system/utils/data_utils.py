@@ -48,33 +48,12 @@ def read_data(dataset, idx, dataset_id, data_split='train'):
         data = np.load(f, allow_pickle=True)['data'].tolist()
     
     return data
-'''
-def read_client_data(dataset, idx, dataset_id, data_split='train', round_idx=0):
-    train_data = read_data(dataset, idx, dataset_id, 'train')
-    test_data = read_data(dataset, idx, dataset_id, 'test')
-    val_data = read_data(dataset, idx, dataset_id, 'val')
-
-    X_train, y_train = train_data['x'], train_data['y']
-    X_test, y_test = test_data['x'], test_data['y']
-    X_val, y_val = val_data['x'], val_data['y']
-
-    unique_labels = set(y_train).union(set(y_test)).union(set(y_val))
-    label_map = {label: i for i, label in enumerate(unique_labels)}
-
-    if data_split == 'train':
-        return [(x, label_map[y]) for x, y in zip(X_train, y_train)], unique_labels
-    elif data_split == 'val':
-        return [(x, label_map[y]) for x, y in zip(X_val, y_val)], unique_labels
-    else:
-        return [(x, label_map[y]) for x, y in zip(X_test, y_test)], unique_labels
-'''
 
 def read_client_data(
     dataset,
     idx,
     dataset_id,
-    data_split='train',
-    train_percent=100
+    data_split='train'
 ):
     train_data = read_data(dataset, idx, dataset_id, 'train')
     test_data  = read_data(dataset, idx, dataset_id, 'test')
