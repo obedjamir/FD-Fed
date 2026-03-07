@@ -49,35 +49,7 @@ class Client(object):
                 break
 
         self.sample_rate = self.batch_size / self.train_samples
-
-    def patch_to_channels(self, x, patch_size=128, target_size=224, resize=True):
-        """
-        x: (B, 1, 512, 512)
-        returns: (B, N_patches, 224, 224)
-        """
-        B, C, H, W = x.shape
-        assert C == 1 and H == 512 and W == 512
-
-        P = patch_size
-
-        # Extract non-overlapping patches
-        patches = x.unfold(2, P, P).unfold(3, P, P)
-        # (B, 1, nH, nW, P, P)
-
-        patches = patches.contiguous().view(B, 1, -1, P, P)
-        patches = patches.squeeze(1)  # (B, Np, P, P)
-
-        # Resize each patch to 224×224
-        if resize:
-            patches = F.interpolate(
-                patches,
-                size=(target_size, target_size),
-                mode="bilinear",
-                align_corners=False
-            )
-
-        return patches  # (B, Np, 224, 224)
-
+        
     def compute_class_sample_count(self, dataset):
         """
         dataset: torch.utils.data.Dataset
