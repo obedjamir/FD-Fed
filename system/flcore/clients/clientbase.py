@@ -29,7 +29,7 @@ class Client(object):
         self.num_classes = len(local_labels)
 
         self.train_samples = train_samples
-        self.model = LocalModel(copy.deepcopy(args.model), self.num_classes, out_feats=768).to(args.device)
+        self.model = LocalModel(copy.deepcopy(args.model), self.num_classes, out_feats=1280).to(args.device)
         self.model._register_block_hooks()
         self.train_data = None
         self.test_data = None
