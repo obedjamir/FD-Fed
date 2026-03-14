@@ -4,11 +4,47 @@ import torch.nn.functional as F
 import torchvision.models as models
 import torchvision
 
+class DownsampleBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(1, 16, 3, stride=2, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(16, 32, 7),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(32, 32, 7),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(32, 32, 5),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(32, 32, 5),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(32, 16, 7),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(16, 3, 7),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        return self.block(x)
+
 class EfficientNetB0(nn.Module):
     def __init__(self):
         super(EfficientNetB0, self).__init__()
         effnet = models.efficientnet_b0(pretrained=False)
-
+        self.downsample = DownsampleBlock()
         self.features = nn.Sequential(
             effnet.features,
             nn.AdaptiveAvgPool2d((1, 1))
@@ -21,6 +57,7 @@ class EfficientNetB0(nn.Module):
 
     def _create_block_list(self):
         block_list = []
+        block_list.append(self.downsample)
         for block in self.features[0]:
             if block.__class__.__name__ == 'Sequential':
                 for sub_block in block:
