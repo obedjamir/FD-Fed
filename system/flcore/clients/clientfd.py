@@ -46,7 +46,7 @@ class clientFDFed(Client):
                 loss = self.criterion(output, y)
                 loss.backward()
                 optimizer.step()
-                break
+                #break
 
     def replace_blocks(self, global_model):
         blocks_replaced = 0
