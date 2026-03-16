@@ -148,7 +148,7 @@ class Client(object):
 
                 y_prob.append(output.detach().cpu().numpy())
                 y_true.append(label_binarize(y.detach().cpu().numpy(), classes=np.arange(self.num_classes)))
-                break
+                #break
 
         y_prob = np.concatenate(y_prob, axis=0)
         y_true = np.concatenate(y_true, axis=0)
